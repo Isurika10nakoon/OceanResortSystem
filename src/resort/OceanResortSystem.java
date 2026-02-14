@@ -421,8 +421,9 @@ public class OceanResortSystem extends JFrame {
         JPanel logoPanel = new JPanel();
         logoPanel.setLayout(new BoxLayout(logoPanel, BoxLayout.Y_AXIS));
         logoPanel.setOpaque(false);
-        logoPanel.setMaximumSize(new Dimension(230, 80));
+        logoPanel.setMaximumSize(new Dimension(260, 100));
         logoPanel.setBorder(new EmptyBorder(0, 10, 20, 10));
+        logoPanel.setAlignmentX(Component.CENTER_ALIGNMENT);
         
         JLabel logoIcon = new JLabel("🏖️", JLabel.CENTER);
         logoIcon.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 36));
@@ -451,14 +452,21 @@ public class OceanResortSystem extends JFrame {
             {"🚪", "Logout"}
         };
         
+        Dimension btnMaxSize = new Dimension(230, 45);
+        
         for (String[] item : menuItems) {
             JButton btn = createModernSidebarButton(item[0], item[1]);
+            btn.setAlignmentX(Component.CENTER_ALIGNMENT);
+            btn.setMaximumSize(btnMaxSize);
             menuButtons.put(item[1], btn);
             sidebar.add(btn);
             sidebar.add(Box.createVerticalStrut(8));
         }
         
         sidebar.add(Box.createVerticalGlue());
+        
+        main.add(sidebar, BorderLayout.WEST);
+        add(main);
         
         // User info
         JPanel userPanel = new JPanel(new BorderLayout(10, 0));
@@ -1069,7 +1077,7 @@ public class OceanResortSystem extends JFrame {
         searchField.setPlaceholder("Search reservations...");
         searchField.setPreferredSize(new Dimension(300, 45));
         
-        ModernButton refreshBtn = new ModernButton("🔄 REFRESH", INFO_COLOR, true);
+        ModernButton refreshBtn = new ModernButton("REFRESH", INFO_COLOR, true);
         refreshBtn.setPreferredSize(new Dimension(120, 45));
         
         searchPanel.add(searchField);
@@ -1088,7 +1096,7 @@ public class OceanResortSystem extends JFrame {
         };
         
         JTable table = new JTable(model);
-        table.setRowHeight(55);
+        table.setRowHeight(60);
         table.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         table.setSelectionBackground(new Color(PRIMARY_COLOR.getRed(), PRIMARY_COLOR.getGreen(), 
                                                 PRIMARY_COLOR.getBlue(), 40));
@@ -1136,11 +1144,18 @@ public class OceanResortSystem extends JFrame {
             JPanel panel1 = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 10));
             panel1.setOpaque(false);
             
+            Dimension btnSize = new Dimension(55, 40); 
+            Font btnFont = new Font("Segoe UI Emoji", Font.PLAIN, 20);
+
             JButton viewBtn = new JButton("👁");
+            viewBtn.setPreferredSize(btnSize); 
+            viewBtn.setFont(btnFont);         
             viewBtn.setToolTipText("View Details");
             styleActionButton(viewBtn, INFO_COLOR);
-            
+
             JButton deleteBtn = new JButton("🗑");
+            deleteBtn.setPreferredSize(btnSize);
+            deleteBtn.setFont(btnFont);
             deleteBtn.setToolTipText("Delete");
             styleActionButton(deleteBtn, DANGER_COLOR);
             
@@ -1157,14 +1172,22 @@ public class OceanResortSystem extends JFrame {
                 
                 String resNo = (String) tbl.getValueAt(row, 0);
                 
+                Dimension btnSize = new Dimension(55, 40);
+                Font btnFont = new Font("Segoe UI Emoji", Font.PLAIN, 20);
+
                 JButton viewBtn = new JButton("👁");
+                viewBtn.setPreferredSize(btnSize);
+                viewBtn.setFont(btnFont);
                 viewBtn.setToolTipText("View Details");
                 styleActionButton(viewBtn, INFO_COLOR);
                 viewBtn.addActionListener(e -> showReservationDetails(resNo));
-                
+
                 JButton deleteBtn = new JButton("🗑");
+                deleteBtn.setPreferredSize(btnSize);
+                deleteBtn.setFont(btnFont);
                 deleteBtn.setToolTipText("Delete");
                 styleActionButton(deleteBtn, DANGER_COLOR);
+                
                 deleteBtn.addActionListener(e -> {
                     int confirm = JOptionPane.showConfirmDialog(
                         OceanResortSystem.this,
@@ -1251,7 +1274,7 @@ public class OceanResortSystem extends JFrame {
         mainPanel.setBackground(Color.WHITE);
         mainPanel.setBorder(new EmptyBorder(35, 35, 35, 35));
         
-        JLabel titleLabel = new JLabel("📋 Reservation Details");
+        JLabel titleLabel = new JLabel("Reservation Details");
         titleLabel.setFont(new Font("Segoe UI", Font.BOLD, 26));
         titleLabel.setForeground(PRIMARY_COLOR);
         
