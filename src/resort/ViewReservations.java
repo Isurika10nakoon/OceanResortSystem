@@ -2,289 +2,377 @@ package resort;
 
 import java.awt.*;
 import java.awt.event.*;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.*;
-import java.time.LocalDate;
 
 public class ViewReservations {
     private OceanResortSystem mainSystem;
     private JPanel contentArea;
+    private DefaultTableModel tableModel;
 
     public ViewReservations(OceanResortSystem system, JPanel content) {
-        this.mainSystem = system;
+        this.mainSystem  = system;
         this.contentArea = content;
         showViewReservations();
     }
 
+    /* ══════════════════════════════════════════════════════════
+       MAIN PANEL
+    ══════════════════════════════════════════════════════════ */
     private void showViewReservations() {
-        JPanel panel = new JPanel(new BorderLayout());
+        JPanel panel = new JPanel(new BorderLayout(0, 20));
         panel.setBackground(mainSystem.BG_COLOR);
         panel.setBorder(new EmptyBorder(30, 35, 30, 35));
-        
+
+        // ── Header row ──────────────────────────────────────────
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
-        
+
         JLabel header = new JLabel("All Reservations");
         header.setFont(new Font("Segoe UI", Font.BOLD, 32));
         header.setForeground(new Color(33, 33, 33));
-        
+
         JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         searchPanel.setOpaque(false);
-        
+
         ModernTextField searchField = new ModernTextField();
         searchField.setPlaceholder("Search reservations...");
         searchField.setPreferredSize(new Dimension(300, 45));
-        
+
         ModernButton refreshBtn = new ModernButton("REFRESH", mainSystem.INFO_COLOR, true);
         refreshBtn.setPreferredSize(new Dimension(120, 45));
-        
+
         searchPanel.add(searchField);
         searchPanel.add(refreshBtn);
-        
-        headerPanel.add(header, BorderLayout.WEST);
+
+        headerPanel.add(header,      BorderLayout.WEST);
         headerPanel.add(searchPanel, BorderLayout.EAST);
-        
-        // Table
+
+        // ── Table ────────────────────────────────────────────────
         String[] columns = {"ID", "Guest Name", "Room", "Check-In", "Check-Out", "Status", "Actions"};
-        DefaultTableModel model = new DefaultTableModel(columns, 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) {
-                return column == 6;
-            }
+        tableModel = new DefaultTableModel(columns, 0) {
+            @Override public boolean isCellEditable(int row, int col) { return col == 6; }
         };
-        
-        JTable table = new JTable(model);
-        table.setRowHeight(60);
+
+        JTable table = new JTable(tableModel);
+        table.setRowHeight(56);
         table.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        table.setSelectionBackground(new Color(mainSystem.PRIMARY_COLOR.getRed(), mainSystem.PRIMARY_COLOR.getGreen(), 
-                                                mainSystem.PRIMARY_COLOR.getBlue(), 40));
+        table.setSelectionBackground(new Color(
+                mainSystem.PRIMARY_COLOR.getRed(),
+                mainSystem.PRIMARY_COLOR.getGreen(),
+                mainSystem.PRIMARY_COLOR.getBlue(), 40));
         table.setGridColor(new Color(240, 240, 240));
         table.setShowVerticalLines(false);
         table.setShowHorizontalLines(true);
         table.setIntercellSpacing(new Dimension(0, 1));
-        
-        JTableHeader tableHeader = table.getTableHeader();
-        tableHeader.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        tableHeader.setBackground(Color.WHITE);
-        tableHeader.setForeground(new Color(66, 66, 66));
-        tableHeader.setPreferredSize(new Dimension(tableHeader.getPreferredSize().width, 50));
-        tableHeader.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(230, 230, 230)));
-        
-        // Status column renderer
-        table.getColumn("Status").setCellRenderer((tbl, value, isSelected, hasFocus, row, column) -> {
-            JLabel label = new JLabel(value.toString());
-            label.setFont(new Font("Segoe UI", Font.BOLD, 11));
-            label.setOpaque(true);
-            label.setHorizontalAlignment(SwingConstants.CENTER);
-            label.setBorder(new EmptyBorder(6, 12, 6, 12));
-            
-            Color statusColor;
-            String status = value.toString();
-            if (status.equals("Active")) {
-                statusColor = mainSystem.SUCCESS_COLOR;
-            } else if (status.equals("Upcoming")) {
-                statusColor = mainSystem.WARNING_COLOR;
-            } else if (status.equals("Completed")) {
-                statusColor = new Color(158, 158, 158);
-            } else {
-                statusColor = Color.GRAY;
+
+        // Table header style
+        JTableHeader th = table.getTableHeader();
+        th.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        th.setBackground(Color.WHITE);
+        th.setForeground(new Color(66, 66, 66));
+        th.setPreferredSize(new Dimension(th.getPreferredSize().width, 50));
+        th.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(230, 230, 230)));
+
+        // Status column badge renderer
+        table.getColumn("Status").setCellRenderer((tbl, value, sel, foc, row, col) -> {
+            JLabel lbl = new JLabel(value.toString(), JLabel.CENTER);
+            lbl.setFont(new Font("Segoe UI", Font.BOLD, 11));
+            lbl.setOpaque(true);
+            lbl.setBorder(new EmptyBorder(6, 12, 6, 12));
+            Color c;
+            switch (value.toString()) {
+                case "Active":    c = mainSystem.SUCCESS_COLOR; break;
+                case "Upcoming":  c = mainSystem.WARNING_COLOR; break;
+                default:          c = new Color(158, 158, 158); break;
             }
-            
-            label.setBackground(new Color(statusColor.getRed(), statusColor.getGreen(), 
-                                         statusColor.getBlue(), 25));
-            label.setForeground(statusColor);
-            
-            return label;
+            lbl.setBackground(new Color(c.getRed(), c.getGreen(), c.getBlue(), 25));
+            lbl.setForeground(c);
+            return lbl;
         });
-        
-        // Actions column
-        table.getColumn("Actions").setCellRenderer((tbl, value, isSelected, hasFocus, row, column) -> {
-            JPanel panel1 = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 10));
-            panel1.setOpaque(false);
-            
-            Dimension btnSize = new Dimension(45, 35); 
-            Font btnFont = new Font("Segoe UI Emoji", Font.PLAIN, 18);
 
-            JButton viewBtn = new JButton("👁");
-            viewBtn.setPreferredSize(btnSize); 
-            viewBtn.setFont(btnFont);         
-            viewBtn.setToolTipText("View Details");
-            styleActionButton(viewBtn, mainSystem.INFO_COLOR);
-
-            JButton deleteBtn = new JButton("🗑");
-            deleteBtn.setPreferredSize(btnSize);
-            deleteBtn.setFont(btnFont);
-            deleteBtn.setToolTipText("Delete");
-            styleActionButton(deleteBtn, mainSystem.DANGER_COLOR);
-            
-            panel1.add(viewBtn);
-            panel1.add(deleteBtn);
-            return panel1;
+        // Actions column — renderer (display only, shows the buttons visually)
+        table.getColumn("Actions").setCellRenderer((tbl, val, sel, foc, row, col) -> {
+            JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 9));
+            p.setOpaque(false);
+            p.add(makeActionBtn("✏  Edit",   mainSystem.INFO_COLOR));
+            p.add(makeActionBtn("🗑  Delete", mainSystem.DANGER_COLOR));
+            return p;
         });
-        
+
+        // Actions column — editor (clickable)
         table.getColumn("Actions").setCellEditor(new DefaultCellEditor(new JCheckBox()) {
             @Override
-            public Component getTableCellEditorComponent(JTable tbl, Object value, boolean isSelected, int row, int column) {
-                JPanel panel1 = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 10));
-                panel1.setOpaque(false);
-                
+            public Component getTableCellEditorComponent(JTable tbl, Object val,
+                    boolean sel, int row, int col) {
+
                 String resNo = (String) tbl.getValueAt(row, 0);
-                
-                Dimension btnSize = new Dimension(45, 35);
-                Font btnFont = new Font("Segoe UI Emoji", Font.PLAIN, 18);
 
-                JButton viewBtn = new JButton("👁");
-                viewBtn.setPreferredSize(btnSize);
-                viewBtn.setFont(btnFont);
-                viewBtn.setToolTipText("View Details");
-                styleActionButton(viewBtn, mainSystem.INFO_COLOR);
-                viewBtn.addActionListener(e -> showReservationDetails(resNo));
+                JPanel p = new JPanel(new FlowLayout(FlowLayout.CENTER, 6, 9));
+                p.setOpaque(false);
 
-                JButton deleteBtn = new JButton("🗑");
-                deleteBtn.setPreferredSize(btnSize);
-                deleteBtn.setFont(btnFont);
-                deleteBtn.setToolTipText("Delete");
-                styleActionButton(deleteBtn, mainSystem.DANGER_COLOR);
-                
-                deleteBtn.addActionListener(e -> {
-                    int confirm = JOptionPane.showConfirmDialog(
-                        null,
-                        "Delete this reservation?",
-                        "Confirm Delete",
-                        JOptionPane.YES_NO_OPTION
-                    );
+                JButton editBtn   = makeActionBtn("✏  Edit",   mainSystem.INFO_COLOR);
+                JButton deleteBtn = makeActionBtn("🗑  Delete", mainSystem.DANGER_COLOR);
+
+                editBtn.addActionListener(ev -> {
+                    stopCellEditing();
+                    showEditReservationDialog(resNo);
+                });
+
+                deleteBtn.addActionListener(ev -> {
+                    stopCellEditing();
+                    int confirm = JOptionPane.showConfirmDialog(null,
+                        "Are you sure you want to delete reservation " + resNo + "?",
+                        "Confirm Delete", JOptionPane.YES_NO_OPTION);
                     if (confirm == JOptionPane.YES_OPTION) {
-                        mainSystem.getReservations().remove(resNo);
-                        mainSystem.saveReservationsToFile();
-                        refreshTable(model, null);
-                        JOptionPane.showMessageDialog(null, "✓ Deleted successfully!");
+                        boolean deleted = mainSystem.deleteReservation(resNo);
+                        if (deleted) {
+                            JOptionPane.showMessageDialog(null,
+                                "✓ Reservation " + resNo + " deleted successfully!",
+                                "Deleted", JOptionPane.INFORMATION_MESSAGE);
+                            refreshTable(null);
+                        }
                     }
                 });
-                
-                panel1.add(viewBtn);
-                panel1.add(deleteBtn);
-                return panel1;
+
+                p.add(editBtn);
+                p.add(deleteBtn);
+                return p;
             }
         });
-        
-        refreshTable(model, null);
-        
+
+        // Column widths
+        table.getColumnModel().getColumn(0).setPreferredWidth(90);
+        table.getColumnModel().getColumn(1).setPreferredWidth(180);
+        table.getColumnModel().getColumn(2).setPreferredWidth(80);
+        table.getColumnModel().getColumn(3).setPreferredWidth(100);
+        table.getColumnModel().getColumn(4).setPreferredWidth(100);
+        table.getColumnModel().getColumn(5).setPreferredWidth(90);
+        table.getColumnModel().getColumn(6).setPreferredWidth(180);
+
+        refreshTable(null);
+
+        // Search
         searchField.addKeyListener(new KeyAdapter() {
-            @Override
-            public void keyReleased(KeyEvent e) {
+            @Override public void keyReleased(KeyEvent e) {
                 String term = searchField.getText().toLowerCase().trim();
-                refreshTable(model, term.isEmpty() ? null : term);
+                refreshTable(term.isEmpty() ? null : term);
             }
         });
-        
+
+        // Refresh button — reloads from DB
         refreshBtn.addActionListener(e -> {
+            mainSystem.loadReservationsFromDB();
             searchField.setText("");
-            refreshTable(model, null);
+            refreshTable(null);
         });
-        
-        JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(230, 230, 230)));
-        scrollPane.setBackground(Color.WHITE);
-        
+
+        JScrollPane scroll = new JScrollPane(table);
+        scroll.setBorder(BorderFactory.createLineBorder(new Color(230, 230, 230)));
+        scroll.getViewport().setBackground(Color.WHITE);
+
         JPanel contentPanel = new JPanel(new BorderLayout(0, 20));
         contentPanel.setOpaque(false);
         contentPanel.add(headerPanel, BorderLayout.NORTH);
-        contentPanel.add(scrollPane, BorderLayout.CENTER);
-        
+        contentPanel.add(scroll,      BorderLayout.CENTER);
+
         panel.add(contentPanel);
         contentArea.add(panel);
     }
-    
-    private void styleActionButton(JButton btn, Color color) {
-        btn.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 16));
-        btn.setBackground(new Color(color.getRed(), color.getGreen(), color.getBlue(), 20));
-        btn.setForeground(color);
-        btn.setBorderPainted(false);
-        btn.setFocusPainted(false);
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btn.setPreferredSize(new Dimension(38, 35));
+
+    /* ══════════════════════════════════════════════════════════
+       EDIT RESERVATION DIALOG
+    ══════════════════════════════════════════════════════════ */
+    private void showEditReservationDialog(String resNo) {
+        OceanResortSystem.Reservation r = mainSystem.getReservations().get(resNo);
+        if (r == null) return;
+
+        JDialog dialog = new JDialog();
+        dialog.setTitle("Edit Reservation — " + resNo);
+        dialog.setSize(520, 560);
+        dialog.setLocationRelativeTo(null);
+        dialog.setModal(true);
+        dialog.setLayout(new BorderLayout());
+
+        JPanel outer = new JPanel(new BorderLayout());
+        outer.setBackground(mainSystem.BG_COLOR);
+        outer.setBorder(new EmptyBorder(25, 30, 25, 30));
+
+        JPanel grid = new JPanel(new GridBagLayout());
+        grid.setOpaque(false);
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.fill   = GridBagConstraints.HORIZONTAL;
+        gbc.insets = new Insets(8, 8, 8, 8);
+
+        // ── Fields ──────────────────────────────────────────────
+        // Reservation No — read-only
+        ModernTextField tfResNo = new ModernTextField();
+        tfResNo.setText(r.resNo);
+        tfResNo.setEditable(false);
+        tfResNo.setForeground(Color.GRAY);
+
+        ModernTextField tfName = new ModernTextField();
+        tfName.setPlaceholder("Guest full name");
+        tfName.setText(r.name);
+
+        ModernTextField tfAddr = new ModernTextField();
+        tfAddr.setPlaceholder("Guest address");
+        tfAddr.setText(r.address);
+
+        ModernTextField tfCont = new ModernTextField();
+        tfCont.setPlaceholder("+94 XX XXX XXXX");
+        tfCont.setText(r.contact);
+
+        JComboBox<String> roomBox = new JComboBox<>(new String[]{"Single", "Double", "Suite"});
+        roomBox.setFont(mainSystem.MAIN_FONT);
+        roomBox.setBackground(Color.WHITE);
+        roomBox.setSelectedItem(r.roomType);
+
+        // Date spinners pre-filled from existing reservation
+        SpinnerDateModel checkInModel = new SpinnerDateModel(
+            java.sql.Date.valueOf(r.checkIn), null, null, Calendar.DAY_OF_MONTH);
+        JSpinner checkInSpinner = new JSpinner(checkInModel);
+        checkInSpinner.setEditor(new JSpinner.DateEditor(checkInSpinner, "yyyy-MM-dd"));
+        checkInSpinner.setFont(mainSystem.MAIN_FONT);
+
+        SpinnerDateModel checkOutModel = new SpinnerDateModel(
+            java.sql.Date.valueOf(r.checkOut), null, null, Calendar.DAY_OF_MONTH);
+        JSpinner checkOutSpinner = new JSpinner(checkOutModel);
+        checkOutSpinner.setEditor(new JSpinner.DateEditor(checkOutSpinner, "yyyy-MM-dd"));
+        checkOutSpinner.setFont(mainSystem.MAIN_FONT);
+
+        // Tag fields
+        tfName      .setName("name");
+        tfAddr      .setName("address");
+        tfCont      .setName("contact");
+
+        int row = 0;
+        addFormRow(grid, gbc, "Reservation No",   tfResNo,         row++);
+        addFormRow(grid, gbc, "Guest Full Name *", tfName,          row++);
+        addFormRow(grid, gbc, "Address *",         tfAddr,          row++);
+        addFormRow(grid, gbc, "Contact Number *",  tfCont,          row++);
+        addFormRow(grid, gbc, "Room Type *",       roomBox,         row++);
+        addFormRow(grid, gbc, "Check-In Date *",   checkInSpinner,  row++);
+        addFormRow(grid, gbc, "Check-Out Date *",  checkOutSpinner, row++);
+
+        // ── Update button ────────────────────────────────────────
+        ModernButton updateBtn = new ModernButton("UPDATE RESERVATION", mainSystem.SUCCESS_COLOR);
+        updateBtn.setPreferredSize(new Dimension(Integer.MAX_VALUE, 46));
+
+        gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 2;
+        gbc.insets = new Insets(20, 8, 8, 8);
+        grid.add(updateBtn, gbc);
+
+        outer.add(grid, BorderLayout.CENTER);
+        dialog.add(outer, BorderLayout.CENTER);
+
+        updateBtn.addActionListener(e -> {
+            // Validation
+            boolean valid = true;
+            if (tfName.getText().trim().isEmpty()) { tfName.setError(true); valid = false; }
+            if (tfAddr.getText().trim().isEmpty()) { tfAddr.setError(true); valid = false; }
+            if (tfCont.getText().trim().isEmpty()) { tfCont.setError(true); valid = false; }
+
+            if (!valid) {
+                JOptionPane.showMessageDialog(dialog,
+                    "Please fill all required fields!",
+                    "Validation Error", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            try {
+                java.util.Date inDate  = (java.util.Date) checkInSpinner.getValue();
+                java.util.Date outDate = (java.util.Date) checkOutSpinner.getValue();
+
+                LocalDate checkIn  = inDate.toInstant()
+                        .atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+                LocalDate checkOut = outDate.toInstant()
+                        .atZone(java.time.ZoneId.systemDefault()).toLocalDate();
+
+                if (!checkOut.isAfter(checkIn)) {
+                    JOptionPane.showMessageDialog(dialog,
+                        "Check-out date must be after check-in date!",
+                        "Date Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                // Update in DB
+                boolean updated = mainSystem.updateReservation(
+                    resNo,
+                    tfName.getText().trim(),
+                    tfAddr.getText().trim(),
+                    tfCont.getText().trim(),
+                    roomBox.getSelectedItem().toString(),
+                    checkIn, checkOut
+                );
+
+                if (updated) {
+                    JOptionPane.showMessageDialog(dialog,
+                        "✓ Reservation " + resNo + " updated successfully!",
+                        "Success", JOptionPane.INFORMATION_MESSAGE);
+                    dialog.dispose();
+                    mainSystem.loadReservationsFromDB();  // sync cache
+                    refreshTable(null);
+                }
+
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(dialog,
+                    "Unexpected error: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+                ex.printStackTrace();
+            }
+        });
+
+        dialog.setVisible(true);
     }
-    
-    private void refreshTable(DefaultTableModel model, String filter) {
-        model.setRowCount(0);
-        HashMap<String, OceanResortSystem.Reservation> reservations = mainSystem.getReservations();
-        for (OceanResortSystem.Reservation r : reservations.values()) {
+
+    /* ══════════════════════════════════════════════════════════
+       REFRESH TABLE FROM MEMORY CACHE
+    ══════════════════════════════════════════════════════════ */
+    private void refreshTable(String filter) {
+        tableModel.setRowCount(0);
+        for (OceanResortSystem.Reservation r : mainSystem.getReservations().values()) {
             r.updateStatus();
-            if (filter == null || 
-                r.name.toLowerCase().contains(filter) || 
-                r.resNo.toLowerCase().contains(filter) ||
-                r.contact.toLowerCase().contains(filter)) {
-                model.addRow(new Object[]{
-                    r.resNo, r.name, r.roomType, r.checkIn, r.checkOut, r.status, ""
+            if (filter == null
+                    || r.name.toLowerCase().contains(filter)
+                    || r.resNo.toLowerCase().contains(filter)
+                    || r.contact.toLowerCase().contains(filter)) {
+                tableModel.addRow(new Object[]{
+                    r.resNo, r.name, r.roomType,
+                    r.checkIn, r.checkOut, r.status, ""
                 });
             }
         }
     }
-    
-    private void showReservationDetails(String resNo) {
-        OceanResortSystem.Reservation r = mainSystem.getReservations().get(resNo);
-        if (r == null) return;
-        
-        JDialog dialog = new JDialog((Frame)null, "Reservation Details", true);
-        dialog.setSize(550, 650);
-        dialog.setLocationRelativeTo(null);
-        
-        JPanel mainPanel = new JPanel(new BorderLayout(0, 25));
-        mainPanel.setBackground(Color.WHITE);
-        mainPanel.setBorder(new EmptyBorder(35, 35, 35, 35));
-        
-        JLabel titleLabel = new JLabel("📋 Reservation Details");
-        titleLabel.setFont(new Font("Segoe UI Emoji", Font.BOLD, 26));
-        titleLabel.setForeground(mainSystem.PRIMARY_COLOR);
-        
-        JPanel detailsPanel = new JPanel(new GridLayout(9, 2, 18, 18));
-        detailsPanel.setOpaque(false);
-        detailsPanel.setBorder(new EmptyBorder(10, 0, 10, 0));
-        
-        addDetailRow(detailsPanel, "Reservation No:", r.resNo);
-        addDetailRow(detailsPanel, "Guest Name:", r.name);
-        addDetailRow(detailsPanel, "Address:", r.address);
-        addDetailRow(detailsPanel, "Contact:", r.contact);
-        addDetailRow(detailsPanel, "Room Type:", r.roomType);
-        addDetailRow(detailsPanel, "Check-In:", r.checkIn.toString());
-        addDetailRow(detailsPanel, "Check-Out:", r.checkOut.toString());
-        addDetailRow(detailsPanel, "Status:", r.status);
-        
-        long nights = ChronoUnit.DAYS.between(r.checkIn, r.checkOut);
-        int rate = mainSystem.getRoomRate(r.roomType);
-        long total = nights * rate;
-        addDetailRow(detailsPanel, "Total Amount:", "LKR " + String.format("%,d", total));
-        
-        ModernButton closeBtn = new ModernButton("CLOSE", new Color(117, 117, 117));
-        closeBtn.setPreferredSize(new Dimension(0, 48));
-        closeBtn.addActionListener(e -> dialog.dispose());
-        
-        mainPanel.add(titleLabel, BorderLayout.NORTH);
-        mainPanel.add(detailsPanel, BorderLayout.CENTER);
-        mainPanel.add(closeBtn, BorderLayout.SOUTH);
-        
-        dialog.add(mainPanel);
-        dialog.setVisible(true);
+
+    /* ══════════════════════════════════════════════════════════
+       HELPERS
+    ══════════════════════════════════════════════════════════ */
+    private void addFormRow(JPanel panel, GridBagConstraints gbc,
+                            String label, JComponent field, int row) {
+        gbc.gridx = 0; gbc.gridy = row; gbc.gridwidth = 1; gbc.weightx = 0.3;
+        JLabel lbl = new JLabel(label);
+        lbl.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        panel.add(lbl, gbc);
+
+        gbc.gridx = 1; gbc.weightx = 0.7;
+        field.setPreferredSize(new Dimension(300, 46));
+        panel.add(field, gbc);
     }
-    
-    private void addDetailRow(JPanel panel, String label, String value) {
-        JPanel labelPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        labelPanel.setOpaque(false);
-        JLabel lblLabel = new JLabel(label);
-        lblLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        lblLabel.setForeground(new Color(117, 117, 117));
-        labelPanel.add(lblLabel);
-        
-        JPanel valuePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
-        valuePanel.setOpaque(false);
-        JLabel valLabel = new JLabel(value);
-        valLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
-        valuePanel.add(valLabel);
-        
-        panel.add(labelPanel);
-        panel.add(valuePanel);
+
+    private JButton makeActionBtn(String text, Color color) {
+        JButton btn = new JButton(text);
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        btn.setForeground(color);
+        btn.setBackground(new Color(color.getRed(), color.getGreen(), color.getBlue(), 20));
+        btn.setBorder(BorderFactory.createLineBorder(color, 1));
+        btn.setFocusPainted(false);
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.setPreferredSize(new Dimension(95, 32));
+        return btn;
     }
 }

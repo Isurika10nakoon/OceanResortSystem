@@ -201,6 +201,46 @@ public class OceanResortSystem extends JFrame {
         return 0;
     }
 
+
+    /* ===================== DATABASE: UPDATE RESERVATION ===================== */
+    public boolean updateReservation(String resNo, String name, String address,
+            String contact, String roomType, LocalDate checkIn, LocalDate checkOut) {
+        String sql = "UPDATE reservations SET guest_name=?, address=?, contact=?, "
+                   + "room_type=?, check_in=?, check_out=? WHERE res_no=?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, name);
+            ps.setString(2, address);
+            ps.setString(3, contact);
+            ps.setString(4, roomType);
+            ps.setDate(5, java.sql.Date.valueOf(checkIn));
+            ps.setDate(6, java.sql.Date.valueOf(checkOut));
+            ps.setString(7, resNo);
+            ps.executeUpdate();
+
+            // Update in-memory cache too
+            Reservation r = reservations.get(resNo);
+            if (r != null) {
+                r.name     = name;
+                r.address  = address;
+                r.contact  = contact;
+                r.roomType = roomType;
+                r.checkIn  = checkIn;
+                r.checkOut = checkOut;
+                r.updateStatus();
+            }
+            System.out.println("Reservation " + resNo + " updated.");
+            return true;
+
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(null,
+                "Error updating reservation:\n" + e.getMessage(),
+                "Database Error", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     /* ===================== COMPATIBILITY ===================== */
     void saveReservationsToFile() { /* replaced by DB */ }
 
