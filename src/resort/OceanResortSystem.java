@@ -41,6 +41,11 @@ public class OceanResortSystem extends JFrame {
     // In-memory cache of reservations loaded from DB
     private HashMap<String, Reservation> reservations = new HashMap<>();
 
+    // ── Logged-in user info (set after successful login) ──────────
+    private String loggedInRole     = "";
+    private String loggedInUsername = "";
+    private String loggedInFullName = "";
+
     /* ===================== MODERN THEME ===================== */
     final Color PRIMARY_COLOR  = new Color(25, 118, 210);
     final Color ACCENT_COLOR   = new Color(66, 165, 245);
@@ -55,13 +60,22 @@ public class OceanResortSystem extends JFrame {
 
     /* ===================== CONSTRUCTOR ===================== */
     public OceanResortSystem() {
-        loadReservationsFromDB();   // load from MySQL on startup
+        loadReservationsFromDB();
         new LoginPage(this);
     }
 
-    /* ===================== GETTERS ===================== */
-    public HashMap<String, Reservation> getReservations() {
-        return reservations;
+    /* ===================== GETTERS / SETTERS ===================== */
+    public HashMap<String, Reservation> getReservations() { return reservations; }
+
+    public String getLoggedInRole()     { return loggedInRole; }
+    public String getLoggedInUsername() { return loggedInUsername; }
+    public String getLoggedInFullName() { return loggedInFullName; }
+
+    /** Called by LoginPage after a successful login to store who is logged in */
+    public void setLoggedInUser(String username, String fullName, String role) {
+        this.loggedInUsername = username;
+        this.loggedInFullName = fullName;
+        this.loggedInRole     = role;
     }
 
     public void showMainMenu() {
@@ -78,19 +92,13 @@ public class OceanResortSystem extends JFrame {
         }
     }
 
-    /* ===================== DATABASE: LOAD ALL ===================== */
-    /**
-     * Reads every row from the reservations table into the in-memory HashMap.
-     * Called once at startup and after any write operation to stay in sync.
-     */
+    /* ===================== DATABASE: LOAD RESERVATIONS ===================== */
     public void loadReservationsFromDB() {
         reservations.clear();
         String sql = "SELECT * FROM reservations";
-
         try (Connection conn = DatabaseConnection.getConnection();
              Statement  stmt = conn.createStatement();
              ResultSet  rs   = stmt.executeQuery(sql)) {
-
             while (rs.next()) {
                 Reservation r = new Reservation(
                     rs.getString("res_no"),
@@ -103,29 +111,21 @@ public class OceanResortSystem extends JFrame {
                 );
                 reservations.put(r.resNo, r);
             }
-            System.out.println("✅ Loaded " + reservations.size() + " reservations from database.");
-
+            System.out.println("Loaded " + reservations.size() + " reservations from DB.");
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(null,
-                "Error loading reservations from database:\n" + e.getMessage(),
+                "Error loading reservations:\n" + e.getMessage(),
                 "Database Error", JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace();
         }
     }
 
-    /* ===================== DATABASE: INSERT ===================== */
-    /**
-     * Inserts a new reservation row into MySQL.
-     * Called from AddReservation.java when staff clicks "Save Reservation".
-     */
+    /* ===================== DATABASE: INSERT RESERVATION ===================== */
     public boolean insertReservation(Reservation r) {
         String sql = "INSERT INTO reservations "
                    + "(res_no, guest_name, address, contact, room_type, check_in, check_out) "
                    + "VALUES (?, ?, ?, ?, ?, ?, ?)";
-
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-
             ps.setString(1, r.resNo);
             ps.setString(2, r.name);
             ps.setString(3, r.address);
@@ -133,65 +133,82 @@ public class OceanResortSystem extends JFrame {
             ps.setString(5, r.roomType);
             ps.setDate(6, java.sql.Date.valueOf(r.checkIn));
             ps.setDate(7, java.sql.Date.valueOf(r.checkOut));
-
             ps.executeUpdate();
-            reservations.put(r.resNo, r);   // keep cache in sync
-            System.out.println("✅ Reservation " + r.resNo + " inserted into database.");
+            reservations.put(r.resNo, r);
+            System.out.println("Reservation " + r.resNo + " inserted.");
             return true;
-
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(null,
-                "Error saving reservation to database:\n" + e.getMessage(),
+                "Error saving reservation:\n" + e.getMessage(),
                 "Database Error", JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace();
             return false;
         }
     }
 
-    /* ===================== DATABASE: DELETE ===================== */
-    /**
-     * Deletes a reservation row by reservation number.
-     * Called from ViewReservations.java when staff clicks Delete.
-     */
+    /* ===================== DATABASE: DELETE RESERVATION ===================== */
     public boolean deleteReservation(String resNo) {
         String sql = "DELETE FROM reservations WHERE res_no = ?";
-
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-
             ps.setString(1, resNo);
             ps.executeUpdate();
-            reservations.remove(resNo);     // keep cache in sync
-            System.out.println("✅ Reservation " + resNo + " deleted from database.");
+            reservations.remove(resNo);
+            System.out.println("Reservation " + resNo + " deleted.");
             return true;
-
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(null,
                 "Error deleting reservation:\n" + e.getMessage(),
                 "Database Error", JOptionPane.ERROR_MESSAGE);
-            e.printStackTrace();
             return false;
         }
     }
 
-    /* ===================== KEPT FOR COMPATIBILITY ===================== */
+    /* ===================== DATABASE: VALIDATE LOGIN ===================== */
     /**
-     * Old file-save method — now delegates to insertReservation().
-     * Keeping the name so other classes that call saveReservationsToFile()
-     * don't break during the transition.
+     * Queries the staff table for matching username + password.
+     * If valid: stores logged-in user info AND returns the role ("Admin" or "Staff").
+     * If invalid: returns null.
      */
-    void saveReservationsToFile() {
-        // No longer writes a file — DB is the source of truth.
-        // Individual inserts are handled by insertReservation().
+    public String validateStaffLogin(String username, String password) {
+        String sql = "SELECT full_name, role FROM staff WHERE username = ? AND password = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, username);
+            ps.setString(2, password);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                String fullName = rs.getString("full_name");
+                String role     = rs.getString("role");
+                setLoggedInUser(username, fullName, role);  // store for MainMenu
+                return role;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
+
+    /* ===================== DATABASE: STAFF COUNT ===================== */
+    public int getStaffCount() {
+        String sql = "SELECT COUNT(*) FROM staff";
+        try (Connection conn = DatabaseConnection.getConnection();
+             Statement  stmt = conn.createStatement();
+             ResultSet  rs   = stmt.executeQuery(sql)) {
+            if (rs.next()) return rs.getInt(1);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return 0;
+    }
+
+    /* ===================== COMPATIBILITY ===================== */
+    void saveReservationsToFile() { /* replaced by DB */ }
 
     /* ===================== MAIN ===================== */
     public static void main(String[] args) {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        } catch (Exception e) { e.printStackTrace(); }
         SwingUtilities.invokeLater(() -> new OceanResortSystem());
     }
 }
