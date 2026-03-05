@@ -1,6 +1,5 @@
-1,isu,kegalle,1234567890,Single,2026-02-17,2026-02-18
-2,uvindu,matale,123445,Double,2026-02-14,2026-02-15
-3,uvi,kegalle,123456789,Single,2026-02-18,2026-02-19
-4,tennakoon,kegalle,1234567890,Single,2026-02-14,2026-02-15
-5,isu,kandy,1235,Single,2026-02-15,2026-02-17
-6,ten,kandy,123456,Suite,2026-02-15,2026-02-16
+1,Uvindu Isurika Tennakoon,Kegalle,0711234560,Double,2026-03-02,2026-03-03
+2,Lakmal Senarathne,Kandy,0721234569,Single,2026-03-04,2026-03-06
+3,Mandini Adithya,Minuwangoda,0761234560,Suite,2026-03-04,2026-03-06
+4,Ruchira Wijayasena,Meegoda,0780987654,Double,2026-03-02,2026-03-04
+10,kumudu,kandy,0714444444,Single,2026-03-05,2026-03-06
